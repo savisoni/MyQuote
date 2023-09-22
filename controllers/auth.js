@@ -10,14 +10,7 @@ const {validationResult}= require("express-validator");
 // const smtpTransport = require("nodemailer-smtp-transport");
 const { Op } = require("sequelize");
 
-const transporter = nodemailer.createTransport(
-  sendgridTransport({
-    auth: {
-      api_key:
-        "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",
-    },
-  })
-);
+
 
 exports.postSignUP = async (req, res, next) => {
   try {
