@@ -10,22 +10,11 @@ const {validationResult}= require("express-validator");
 // const smtpTransport = require("nodemailer-smtp-transport");
 const { Op } = require("sequelize");
 
-// let mailTransporter = nodemailer.createTransport(smtpTransport({
-//   service:"gmail",
-//   auth:{
-//     user:"sonisavi75@gmail.com",
-//     pass:"********"
-//   }
-// })
-// //  auth:" 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"
-
-// )
-
 const transporter = nodemailer.createTransport(
   sendgridTransport({
     auth: {
       api_key:
-        "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",
+        "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",
     },
   })
 );

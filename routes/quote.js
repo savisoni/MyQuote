@@ -6,7 +6,7 @@ const passport = require("passport");
 
 const Auth = passport.authenticate("jwt", { session: false });
 
-router.get("/all",Auth, quoteController.getQuotes);
+router.get("/all/:quoteId?",Auth, quoteController.getQuotes);
 
 
 router.post(

@@ -43,9 +43,16 @@ const User = sequelize.define('user',{
         allowNull: false,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'), 
         onUpdate: Sequelize.literal('CURRENT_TIMESTAMP')
-        }
+        },
+    isDeleted:{
+        type:Sequelize.BOOLEAN,
+        defaultValue:false
+    }
     
 
+},
+{
+    paranoid: true
 })
 
 module.exports = User;
