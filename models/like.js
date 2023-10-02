@@ -2,7 +2,6 @@ const Sequelize= require("sequelize");
 
 const sequelize = require("../util/database");
 
-
 const Like = sequelize.define("like",{
     id:{
         type:Sequelize.INTEGER,
@@ -34,5 +33,6 @@ const Like = sequelize.define("like",{
 {
     paranoid: true
 });
+
 
 module.exports=Like;

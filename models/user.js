@@ -1,7 +1,5 @@
 const Sequelize= require("sequelize");
-
 const sequelize = require("../util/database");
-
 const User = sequelize.define('user',{
     id:{
         type:Sequelize.INTEGER,
@@ -24,14 +22,24 @@ const User = sequelize.define('user',{
         type:Sequelize.STRING,
         allowNull:false
     },
-    resetToken:Sequelize.STRING,
-    resetTokenExpiration:Sequelize.DATE,
+    resetToken:{
+        type:Sequelize.STRING,
+        defaultValue:null
+    },
+    resetTokenExpiration:{
+       type: Sequelize.DATE  ,
+       defaultValue:null
+    },
 
     isValid: {
         type:Sequelize.BOOLEAN,
         defaultValue:false
     },
-    verificationToken:Sequelize.STRING,
+    verificationToken:
+    {
+        type:Sequelize.STRING,
+        defaultValue:null
+    },
     
     createdAt: {
         type: Sequelize.DATE,
@@ -44,9 +52,9 @@ const User = sequelize.define('user',{
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'), 
         onUpdate: Sequelize.literal('CURRENT_TIMESTAMP')
         },
-    isDeleted:{
-        type:Sequelize.BOOLEAN,
-        defaultValue:false
+    
+    collaborationsToday:{
+        type:Sequelize.INTEGER
     }
     
 
@@ -54,5 +62,7 @@ const User = sequelize.define('user',{
 {
     paranoid: true
 })
+
+
 
 module.exports = User;

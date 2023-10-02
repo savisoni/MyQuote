@@ -1,8 +1,9 @@
 const express = require("express");
-const authController = require("../controllers/auth");
+const authController = require("../../controllers/auth/auth");
 const router = express.Router();
-const {body,param } = require("express-validator");
-const User = require("../models/user");
+const { body, param} = require("express-validator");
+const User = require("../../models/user");
+const md5 = require("md5");
 
 router.post(
   "/signup",
@@ -37,33 +38,33 @@ router.post(
   ],
   authController.postSignUP
 );
-router.post("/login", [
-  body("email").isEmail().withMessage("Please enter a valid email address.").custom(async(value,{req})=>{
-    const user = await User.findOne({ where: { email: req.body.email } });
-    if (! user) {
-      return Promise.reject(
-        "No user with this email"
-      );
-    }
-  }),
-  body("password", "Wrong Password.")
-    .isLength({ min: 5 })
-    .isAlphanumeric()
-    .trim(),
-], authController.postLogin);
+router.post("/login", authController.postLogin);
 
 router.post("/reset-pwd", authController.postResetPassword);
-router.post("/reset-pwd/:token", authController.createNewPassword);
+router.post("/reset-pwd/:token",[
+   body("password", "please enter passowrd with only text and numbers having atleast 5 characters"
+   )
+     .isLength({ min: 5 })
+     .isAlphanumeric()
+     .trim()
+], authController.createNewPassword);
 
 router.post("/logout", authController.postLogout);
-router.get("/verify-user/:token",[
-  param('token').notEmpty().withMessage('Token is required').custom(async(value,{req})=>{
-    const user = await User.findOne({ where: { verificationToken: req.params.token } });
-    if (! user) {
-      return Promise.reject(
-        "Invalid verification token"
-      );
-    }
-  })
-],authController.verifyUser);
+router.get(
+  "/verify-user/:token",
+  [
+    param("token")
+      .notEmpty()
+      .withMessage("Token is required")
+      .custom(async (value, { req }) => {
+        const user = await User.findOne({
+          where: { verificationToken: req.params.token },
+        });
+        if (!user) {
+          return Promise.reject("Invalid verification token");
+        }
+      }),
+  ],
+  authController.verifyUser
+);
 module.exports = router;

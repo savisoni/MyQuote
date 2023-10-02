@@ -1,32 +1,16 @@
 const Sequelize= require("sequelize");
 const sequelize = require("../util/database");
-const Quote = sequelize.define('quote',{
+
+const Collaboration = sequelize.define("collaboration", {
     id:{
         type:Sequelize.INTEGER,
         allowNull:false,
         autoIncrement:true,
         primaryKey:true
     },
-    title:{
-        type:Sequelize.STRING,
-        allowNull:false
-
-    },
-    content:{
-        type:Sequelize.STRING,
-        allowNull:false
-    },
-    collaborationMode:{
+    permissionGranted :{
         type:Sequelize.BOOLEAN,
-        defaultValue:false
-    },
-    status:{
-        type:Sequelize.STRING,
-        defaultValue:"draft"
-    },
-    isDeleted :{
-        type:Sequelize.BOOLEAN,
-        defaultValue:false
+        defaultValue:null
     },
     createdAt: {
         type: Sequelize.DATE,
@@ -39,10 +23,6 @@ const Quote = sequelize.define('quote',{
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'), 
         onUpdate: Sequelize.literal('CURRENT_TIMESTAMP')
         }
-},
-{
-    paranoid: true
-});
+},{paranoid:true});
 
-
-module.exports = Quote;
+module.exports = Collaboration;

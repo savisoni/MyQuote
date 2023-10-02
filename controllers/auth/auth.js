@@ -1,25 +1,23 @@
-const User = require("../models/user");
+const User = require("../../models/user");
 const md5 = require("md5");
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const passport = require("passport");
-const sendgridTransport = require("nodemailer-sendgrid-transport");
-const nodemailer = require("nodemailer");
 const bcrypt = require("bcryptjs");
 const {validationResult}= require("express-validator");
-// const smtpTransport = require("nodemailer-smtp-transport");
+const transporter = require("../../helpers/utility")
 const { Op } = require("sequelize");
-
 
 
 exports.postSignUP = async (req, res, next) => {
   try {
 
 
-    const { username, email, password, confirmPassword } = req.body;
+    const { username, email, password, confirmPassword,subscriptionId} = req.body;
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({errors:errors.array()})
+       
     }
     // const findUser = await User.findAll({ where: { email: email } });
     // if (findUser.length>0) {
@@ -45,6 +43,7 @@ exports.postSignUP = async (req, res, next) => {
       email: email,
       password: md5(password),
       verificationToken,
+      subscriptionId:subscriptionId
     });
 
     transporter.sendMail({
@@ -61,6 +60,8 @@ exports.postSignUP = async (req, res, next) => {
       });
   } catch (error) {
     res.json({ error: error.message });
+
+    // throw error;
   }
 };
 
@@ -93,19 +94,27 @@ exports.postLogin = async (req, res, next) => {
 
     if (!errors.isEmpty()) {
       return res.status(400).json({errors:errors.array()})
+      // throw errors;
     }
+
     const user = await User.findOne({ where: { email: email } });
-    // if (!user) {
-    //   const error = new Error("A user with this email cannot be found");
-    //   error.statusCode = 401;
-    //   console.log("error message", error.stack);
-    //   return next(error);
-    // }
-    // if (password !== user.password) {
-    //   const error = new Error("Wrong Password");
-    //   error.statusCode = 401;
-    //   return next(error);
-    // }
+    if (!user) {
+      const error = new Error("A user with this email cannot be found");
+      error.statusCode = 401;
+      console.log("error message", error.stack);
+      return next(error);
+    }
+    if (user.isValid !== true) {
+      const error = new Error("User not verified");
+      error.statusCode = 401;
+      console.log("error message", error.stack);
+      return next(error);
+    }
+    if (password !== user.password) {
+      const error = new Error("Wrong Password");
+      error.statusCode = 401;
+      return next(error);
+    }
     const token = jwt.sign({ id: user.id }, "somesecretkey", {
       expiresIn: "1h",
     });
@@ -144,8 +153,16 @@ exports.postLogout = async(req,res,next)=>{
   res.json({ message: 'Logout successfully' });
 }
 
-exports.postResetPassword = (req, res, next) => {
+exports.postResetPassword = async(req, res, next) => {
   try {
+
+    let user = await User.findOne({ where: { email: req.body.email } });
+      if (!user) {
+        // return res.status(401).json({ message: "No user with this email" });
+        const error = new Error("No user with this email");
+      error.statusCode = 401;
+      return next(error);
+      }
     crypto.randomBytes(32, async (err, buffer) => {
       if (err) {
         console.error(err);
@@ -157,13 +174,7 @@ exports.postResetPassword = (req, res, next) => {
 
       const resetToken = buffer.toString("hex");
 
-      let user = await User.findOne({ where: { email: req.body.email } });
-      if (!user) {
-        // return res.status(401).json({ message: "No user with this email" });
-        const error = new Error("No user with this email");
-      error.statusCode = 401;
-      return next(error);
-      }
+      
 
       user.resetToken = resetToken;
       user.resetTokenExpiration = Date.now() + 3600000;
@@ -201,9 +212,15 @@ exports.postResetPassword = (req, res, next) => {
 
 exports.createNewPassword = async (req, res, next) => {
   try {
-    const password = req.body.password;
+    const password = md5(req.body.password);
     const token = req.params.token;
-    const hashedpassword = md5(password);
+    // const hashedpassword = md5(password);
+    const errors = validationResult(req);
+
+    if (!errors.isEmpty()) {
+      return res.status(400).json({errors:errors.array()})
+      // throw errors;
+    }
     const user = await User.findOne({
       where: {
         resetToken: token,
@@ -217,7 +234,7 @@ exports.createNewPassword = async (req, res, next) => {
       return next(error);
     }
 
-    user.password = hashedpassword;
+    user.password = password;
     user.resetToken = null;
     user.resetTokenExpiration = null;
     await user.save();

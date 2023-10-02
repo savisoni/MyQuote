@@ -1,5 +1,5 @@
 const express = require("express");
-const likeController = require("../controllers/like");
+const likeController = require("../../controllers/quote/like");
 const passport = require("passport");
 const { body } = require("express-validator");
 const router = express.Router();

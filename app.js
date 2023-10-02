@@ -3,16 +3,16 @@ const User = require("./models/user");
 const Quote = require("./models/quote");
 const Like = require("./models/like");
 const Comment = require("./models/comment");
+const Collaboration = require("./models/collaboration");
+const Subscription = require("./models/subscription");
 const bodyParser = require("body-parser");
 const sequelize = require("./util/database");
 const passport = require("passport");
 const jwtStrategy= require("passport-jwt").Strategy;
 const ExtractJwt= require("passport-jwt").ExtractJwt;
 
-const authRouter = require("./routes/auth");
-const quoteRouter = require("./routes/quote");
-const commentRouter = require("./routes/comment");
-const likeRouter= require("./routes/like")
+
+const mainRoute = require("./routes");
 const app = express();
 
 app.use(bodyParser.json());
@@ -37,23 +37,28 @@ passport.use(new jwtStrategy(jwtOptions,async(jwtPayload,done)=>{
         return done(error,false)
     }
 }))
-app.use("/auth",authRouter);
-app.use("/quote",quoteRouter);
-app.use("/comment",commentRouter);
-app.use("/like",likeRouter);
+
+app.use("/", mainRoute);
 app.use((error, req, res, next) => {
     console.log("error------>>>>" ,error);
     const status = error.statusCode || 500;
     const message = error.message;
     const data = error.data;
      res.status(status).json({status:status, message: message ,  data:data});
+    console.log("errorrrfdkslsdfgnmkdlsjhnrbgmvcksjndmf");
+    // throw error;
   });
 
+User.belongsTo(Subscription,{constraints:true});
+Subscription.hasMany(User);
 
 
+// Quote.belongsTo(User, {foreignKey:"userId", constraints: true, onDelete: "CASCADE"});
+// User.hasMany(Quote);
 
+User.belongsToMany(Quote,{through:Collaboration});
+Quote.belongsToMany(User,{through:Collaboration});
 Quote.belongsTo(User, {foreignKey:"userId", constraints: true, onDelete: "CASCADE"});
-User.hasMany(Quote);
 
 Like.belongsTo(Quote, {constraints:true});
 Quote.hasMany(Like);

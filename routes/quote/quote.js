@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const quoteController = require("../controllers/quote");
+const quoteController = require("../../controllers/quote/quote");
 const { body } = require("express-validator");
 const passport = require("passport");
 
@@ -32,5 +32,9 @@ router.put("/update-quote/:quoteId",[
 ],Auth,quoteController.updateQuote);
 
 router.delete("/delete-quote/:quoteId",Auth,quoteController.deleteQuote);
+
+router.post("/collaboration-req", Auth, quoteController.requestCollabPermission);
+
+router.put("/grant-permission", Auth, quoteController.grantPermission);
 
 module.exports = router;
