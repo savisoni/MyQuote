@@ -38,4 +38,10 @@ const Subscription = sequelize.define(
 );
 
 
+
+Subscription.associate =(models)=>{
+  Subscription.hasMany(models.user);
+  
+}
+
 module.exports = Subscription;

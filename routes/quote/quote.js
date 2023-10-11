@@ -33,8 +33,14 @@ router.put("/update-quote/:quoteId",[
 
 router.delete("/delete-quote/:quoteId",Auth,quoteController.deleteQuote);
 
-router.post("/collaboration-req", Auth, quoteController.requestCollabPermission);
+// router.post("/collaboration-req", Auth, quoteController.requestCollabPermission);
 
-router.put("/grant-permission", Auth, quoteController.grantPermission);
+router.put("/collaboration", Auth, quoteController.collaborationCreateUpdate);
+
+router.delete("/delete-collaboration", Auth, quoteController.deleteCollaboration);
+
+router.get("/all-collaborations",Auth,quoteController.getCollaboration);
+
+router.post("/approve-collab",Auth,quoteController.approveCollaboration);
 
 module.exports = router;

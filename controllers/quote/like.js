@@ -1,6 +1,15 @@
-const Like = require("../../models/like");
-const Quote= require("../../models/quote")
 
+const sequelize= require("../../util/database");
+// const readModels = require("../../models/index");
+
+const readModels = require("../../models/index");
+
+const User = readModels.user;
+const Quote= readModels.quote;
+const Like = readModels.like;
+const Comment = readModels.comment;
+const Subscription = readModels.subscription;
+const Collaboration = readModels.collaboration;
 
 exports.createLike = async (req, res, next) => {
     try {
@@ -13,7 +22,7 @@ exports.createLike = async (req, res, next) => {
       if (!quote) {
         const error = new Error("Quote not found");
         error.statusCode = 404;
-        return next(error);
+        throw error;
       }
   
       if (!like) {
@@ -26,7 +35,7 @@ exports.createLike = async (req, res, next) => {
         return res.status(200).json({ message: "Success", like });
   
     } catch (error) {
-      return res.status(error.statusCode || 500).json({ message: error.message });
+      next(error);
     }
   };
   

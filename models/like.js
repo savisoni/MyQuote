@@ -35,4 +35,10 @@ const Like = sequelize.define("like",{
 });
 
 
+
+Like.associate=(models)=>{
+    Like.belongsTo(models.quote, {constraints:true});
+    Like.belongsTo(models.user,{constraints:true,onDelete:"CASCADE"});
+    
+}
 module.exports=Like;

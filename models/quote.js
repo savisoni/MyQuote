@@ -1,5 +1,6 @@
 const Sequelize= require("sequelize");
 const sequelize = require("../util/database");
+const Like = require("../models/like");
 const Quote = sequelize.define('quote',{
     id:{
         type:Sequelize.INTEGER,
@@ -45,4 +46,12 @@ const Quote = sequelize.define('quote',{
 });
 
 
+Quote.associate=(models)=>{
+    Quote.hasMany(models.collaboration);
+    Quote.hasMany(models.like);
+    Quote.hasMany(models.comment);
+    
+    Quote.belongsTo(models.user, {constraints: true});
+    
+}
 module.exports = Quote;

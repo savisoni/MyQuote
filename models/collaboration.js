@@ -1,5 +1,6 @@
 const Sequelize= require("sequelize");
 const sequelize = require("../util/database");
+const readModels= require("./index");
 
 const Collaboration = sequelize.define("collaboration", {
     id:{
@@ -11,6 +12,14 @@ const Collaboration = sequelize.define("collaboration", {
     permissionGranted :{
         type:Sequelize.BOOLEAN,
         defaultValue:null
+    },
+    addText:{
+       type:Sequelize.TEXT,
+       allowNull:false
+    },
+    status:{
+      type:Sequelize.TEXT,
+      defaultValue:"pending"
     },
     createdAt: {
         type: Sequelize.DATE,
@@ -25,4 +34,11 @@ const Collaboration = sequelize.define("collaboration", {
         }
 },{paranoid:true});
 
+
+Collaboration.associate=(models)=>{
+    console.log("models======================>", models);
+    Collaboration.belongsTo(models.user, { foreignKey: 'userId' });
+    Collaboration.belongsTo(models.quote, { foreignKey: 'quoteId' });
+    
+}
 module.exports = Collaboration;

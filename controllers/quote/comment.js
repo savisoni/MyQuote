@@ -1,5 +1,17 @@
-const Comment = require("../../models/comment");
-const Quote= require("../../models/quote");
+// const Comment = require("../../models/comment");
+// const Quote= require("../../models/quote");
+
+
+const sequelize= require("../../util/database");
+const readModels = require("../../models/index");
+
+// const {User,Comment,Subscription,Like,Collaboration,Quote} = readModels;
+const User = readModels.user;
+const Quote= readModels.quote;
+const Like = readModels.like;
+const Comment = readModels.comment;
+const Subscription = readModels.subscription;
+const Collaboration = readModels.collaboration;
 const {validationResult}= require("express-validator")
 
 exports.createComment = async(req,res,next)=>{
@@ -16,8 +28,8 @@ exports.createComment = async(req,res,next)=>{
      if (! quote) {
         const error = new Error("No quote found with this id");
         error.statusCode = 401;
-        return next(error);
-     }
+        throw error;
+      }
      
      
      const commentData = await Comment.create({
@@ -30,7 +42,7 @@ exports.createComment = async(req,res,next)=>{
 
 
    } catch (error) {
-      return res.status(500).json({message:error.message});
+      next(error)
    }
 }
 
@@ -79,7 +91,7 @@ exports.deleteComment = async (req, res, next) => {
      if (!commentData) {
        const error = new Error("No comment found with this id");
        error.statusCode = 401;
-       return next(error);
+       throw error;
      }
  
      const quoteId = commentData.quoteId;
@@ -88,7 +100,7 @@ exports.deleteComment = async (req, res, next) => {
      if (!quoteData) {
        const error = new Error("No quote found for this comment");
        error.statusCode = 401;
-       return next(error);
+       throw error;
      }
  
      const userId = quoteData.userId;
@@ -96,14 +108,14 @@ exports.deleteComment = async (req, res, next) => {
      if (commentData.userId !== req.user.id && commentData.userId !== userId) {
        const error = new Error("Not authorized");
        error.statusCode = 401;
-       return next(error);
+       throw error;
      }
  
      await commentData.destroy();
  
      return res.status(200).json({ message: "Comment deleted successfully" });
    } catch (error) {
-     return res.status(500).json({ message: error.message });
+    next(error);
    }
  };
  

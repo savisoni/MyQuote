@@ -1,23 +1,34 @@
-const User = require("../../models/user");
 const md5 = require("md5");
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
-const passport = require("passport");
 const bcrypt = require("bcryptjs");
-const {validationResult}= require("express-validator");
-const transporter = require("../../helpers/utility")
+const { validationResult } = require("express-validator");
+const transporter = require("../../helpers/utility");
 const { Op } = require("sequelize");
+const sequelize = require("../../util/database");
+
+const readModels = require("../../models/index");
+
+console.log("readmodels====>", readModels);
+const User = readModels.user;
+
+const {comment}=readModels;
+console.log("comment====>", comment);
+
+// const {User,Comment,Subscription,Like,Collaboration,Quote} = readModels;
+// const models = readModels;
+console.log("seq=========>", readModels);
+// const {User,Comment,Subscription,Like,Collaboration,Quote}=require("../../models/index");
+
 
 
 exports.postSignUP = async (req, res, next) => {
   try {
-
-
-    const { username, email, password, confirmPassword,subscriptionId} = req.body;
+    const { username, email, password, confirmPassword, subscriptionId } =
+      req.body;
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({errors:errors.array()})
-       
+      return res.status(400).json({ errors: errors.array() });
     }
     // const findUser = await User.findAll({ where: { email: email } });
     // if (findUser.length>0) {
@@ -26,8 +37,6 @@ exports.postSignUP = async (req, res, next) => {
     //   return next(error);
     // }
 
-    
-   
     // if (password !== confirmPassword) {
     //   const error = new Error("Passwords should match");
     //   error.statusCode = 401;
@@ -36,14 +45,12 @@ exports.postSignUP = async (req, res, next) => {
     // }
     const verificationToken = crypto.randomBytes(16).toString("hex");
 
-
-
     const user = await User.create({
       username: username,
       email: email,
       password: md5(password),
       verificationToken,
-      subscriptionId:subscriptionId
+      subscriptionId: subscriptionId,
     });
 
     transporter.sendMail({
@@ -53,13 +60,11 @@ exports.postSignUP = async (req, res, next) => {
       html: `<h5>click this <a href="http://localhost:4000/auth/verify-user/${verificationToken}">link</a> to verify your email address</h5>`,
     });
 
-    res
-      .status(201)
-      .json({
-        message: "please check your email to verify your email address",
-      });
+    res.status(201).json({
+      message: "please check your email to verify your email address",
+    });
   } catch (error) {
-    res.json({ error: error.message });
+    next(error);
 
     // throw error;
   }
@@ -69,12 +74,13 @@ exports.verifyUser = async (req, res, next) => {
   try {
     const token = req.params.token;
     const user = await User.findOne({ where: { verificationToken: token } });
-// console.log(user);
-//     if (!user) {
-//       const error = new Error("Invalid verification token");
-//       error.statusCode = 401;
-//       return next(error);
-//     }
+    // console.log(user);
+        if (!user) {
+          const error = new Error("Invalid verification token");
+          error.statusCode = 401;
+          // return next(error);
+          throw error;
+        }
 
     user.isValid = true;
     user.verificationToken = null;
@@ -82,7 +88,7 @@ exports.verifyUser = async (req, res, next) => {
 
     res.status(200).json({ message: "Email verified successfully" });
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 
@@ -93,7 +99,7 @@ exports.postLogin = async (req, res, next) => {
     const errors = validationResult(req);
 
     if (!errors.isEmpty()) {
-      return res.status(400).json({errors:errors.array()})
+      return res.status(400).json({ errors: errors.array() });
       // throw errors;
     }
 
@@ -101,19 +107,19 @@ exports.postLogin = async (req, res, next) => {
     if (!user) {
       const error = new Error("A user with this email cannot be found");
       error.statusCode = 401;
-      console.log("error message", error.stack);
-      return next(error);
+      // return next(error);
+      throw error;
     }
     if (user.isValid !== true) {
       const error = new Error("User not verified");
       error.statusCode = 401;
       console.log("error message", error.stack);
-      return next(error);
+      throw error;
     }
     if (password !== user.password) {
       const error = new Error("Wrong Password");
       error.statusCode = 401;
-      return next(error);
+      throw error;
     }
     const token = jwt.sign({ id: user.id }, "somesecretkey", {
       expiresIn: "1h",
@@ -124,57 +130,57 @@ exports.postLogin = async (req, res, next) => {
       user: user,
     });
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 
 let tokenBlacklist = [];
-exports.postLogout = async(req,res,next)=>{
-
-  console.log("request---------->",req.headers);
-  const token = req.headers.authorization?.replace('Bearer ', '');
-
-  if (!token) {
-    // return res.status(401).json({ message: 'Token not provided' });
-    const error = new Error("Token not provided");
-      error.statusCode = 401;
-      return next(error);
-  }
-  if (tokenBlacklist.includes(token)) {
-    // return res.status(401).json({ message: 'Token is already invalidated' });
-    const error = new Error("Token is already invalidated");
-      error.statusCode = 401;
-      return next(error);
-  }
-
-  tokenBlacklist.push(token);
-  console.log("blacklist---->", tokenBlacklist);
-
-  res.json({ message: 'Logout successfully' });
-}
-
-exports.postResetPassword = async(req, res, next) => {
+exports.postLogout = async (req, res, next) => {
   try {
+    console.log("request---------->", req.headers);
+    const token = req.headers.authorization?.replace("Bearer ", "");
 
-    let user = await User.findOne({ where: { email: req.body.email } });
-      if (!user) {
-        // return res.status(401).json({ message: "No user with this email" });
-        const error = new Error("No user with this email");
+    if (!token) {
+      // return res.status(401).json({ message: 'Token not provided' });
+      const error = new Error("Token not provided");
       error.statusCode = 401;
-      return next(error);
-      }
+      throw error;
+    }
+
+    if (tokenBlacklist.includes(token)) {
+      // return res.status(401).json({ message: 'Token is already invalidated' });
+      const error = new Error("Token is already invalidated");
+      error.statusCode = 401;
+      throw error;
+    }
+
+    tokenBlacklist.push(token);
+    console.log("blacklist---->", tokenBlacklist);
+
+    res.json({ message: "Logout successfully" });
+  } catch (error) {
+    next(error);
+  }
+};
+exports.postResetPassword = async (req, res, next) => {
+  try {
+    let user = await User.findOne({ where: { email: req.body.email } });
+    if (!user) {
+      // return res.status(401).json({ message: "No user with this email" });
+      const error = new Error("No user with this email");
+      error.statusCode = 401;
+      throw error;
+    }
     crypto.randomBytes(32, async (err, buffer) => {
       if (err) {
         console.error(err);
         // return res.status(500).json({ message: "Token generation failed" });
         const error = new Error("Token generation failed");
-      error.statusCode = 401;
-      return next(error);
+        error.statusCode = 401;
+        throw error;
       }
 
       const resetToken = buffer.toString("hex");
-
-      
 
       user.resetToken = resetToken;
       user.resetTokenExpiration = Date.now() + 3600000;
@@ -194,19 +200,17 @@ exports.postResetPassword = async(req, res, next) => {
             return res.status(500).json({ message: "Email could not be sent" });
           } else {
             console.log("Email sent successfully", data);
-            return res
-              .status(200)
-              .json({
-                message: "Password reset email sent successfully",
-                resetToken: user.resetToken,
-                user: user,
-              });
+            return res.status(200).json({
+              message: "Password reset email sent successfully",
+              resetToken: user.resetToken,
+              user: user,
+            });
           }
         }
       );
     });
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 
@@ -218,7 +222,7 @@ exports.createNewPassword = async (req, res, next) => {
     const errors = validationResult(req);
 
     if (!errors.isEmpty()) {
-      return res.status(400).json({errors:errors.array()})
+      return res.status(400).json({ errors: errors.array() });
       // throw errors;
     }
     const user = await User.findOne({
@@ -231,7 +235,7 @@ exports.createNewPassword = async (req, res, next) => {
       // return res.status(401).json({ message: "User not found" });
       const error = new Error("User not found");
       error.statusCode = 401;
-      return next(error);
+      throw error;
     }
 
     user.password = password;
@@ -243,6 +247,6 @@ exports.createNewPassword = async (req, res, next) => {
       .json({ message: "password reset successfully", user: user });
   } catch (error) {
     console.log(error);
-    return res.json({ message: error.message });
+    next(error);
   }
 };

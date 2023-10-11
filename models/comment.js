@@ -33,5 +33,11 @@ const Comment = sequelize.define("comment",{
     paranoid: true
 });
 
+
+Comment.associate=(models)=>{
+    Comment.belongsTo(models.quote, {constraints:true});
+    Comment.belongsTo(models.user,{constraints:true});
+    
+}
 module.exports = Comment;
 
