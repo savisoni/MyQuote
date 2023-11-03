@@ -3,7 +3,6 @@ const { validationResult } = require("express-validator");
 const Sequelize = require("sequelize");
 const { Op, Model } = require("sequelize");
 
-const stripe = require("stripe")("sk_test_51NmxGaSBduoNtQ406TBx154LTGeJy7Nyk5vUCF200XcZjPlQ57nBONwBtMfpeGnjVxoHc8JkV7AUs1bBBeFBgFUj00fAt9FXS9");
 
 const sequelize= require("../../util/database");
 const readModels = require("../../models/index");
