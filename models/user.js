@@ -67,12 +67,13 @@ const User = sequelize.define('user',{
 
 
 User.associate=(models)=>{
-User.belongsTo(models.subscription,{constraints:true});
+// User.belongsTo(models.subscription,{constraints:true});
 User.hasMany(models.collaboration);
 User.hasMany(models.like);
 User.hasMany(models.comment);
-    
-    User.hasMany(require('./quote'));
+User.hasOne(models.customer);
+User.hasMany(require('./quote'));
+User.hasMany(require("./subscriptiondetails"));
 
 }
 module.exports = User;

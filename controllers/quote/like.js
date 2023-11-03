@@ -1,6 +1,5 @@
 
 const sequelize= require("../../util/database");
-// const readModels = require("../../models/index");
 
 const readModels = require("../../models/index");
 

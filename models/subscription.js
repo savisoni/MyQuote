@@ -22,6 +22,10 @@ const Subscription = sequelize.define(
     maxCollaborationPerDay: {
       type: Sequelize.INTEGER,
     },
+    StripeProductId:{
+     type:Sequelize.STRING
+    },
+    
     createdAt: {
         type: Sequelize.DATE,
         allowNull: false,
@@ -40,7 +44,8 @@ const Subscription = sequelize.define(
 
 
 Subscription.associate =(models)=>{
-  Subscription.hasMany(models.user);
+  // Subscription.hasMany(models.user);
+  Subscription.hasMany(require("./subscriptiondetails"));
   
 }
 

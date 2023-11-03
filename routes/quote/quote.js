@@ -43,4 +43,8 @@ router.get("/all-collaborations",Auth,quoteController.getCollaboration);
 
 router.post("/approve-collab",Auth,quoteController.approveCollaboration);
 
+router.get("/checkout-session/:priceId", Auth, quoteController.createCheckout);
+
+router.get("/checkout/success",quoteController.checkoutSuccess);
+
 module.exports = router;

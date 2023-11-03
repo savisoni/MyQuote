@@ -1,7 +1,6 @@
 const md5 = require("md5");
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
-const bcrypt = require("bcryptjs");
 const { validationResult } = require("express-validator");
 const transporter = require("../../helpers/utility");
 const { Op } = require("sequelize");
@@ -15,34 +14,19 @@ const User = readModels.user;
 const {comment}=readModels;
 console.log("comment====>", comment);
 
-// const {User,Comment,Subscription,Like,Collaboration,Quote} = readModels;
-// const models = readModels;
 console.log("seq=========>", readModels);
-// const {User,Comment,Subscription,Like,Collaboration,Quote}=require("../../models/index");
 
 
 
 exports.postSignUP = async (req, res, next) => {
   try {
-    const { username, email, password, confirmPassword, subscriptionId } =
+    const { username, email, password, confirmPassword } =
       req.body;
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
-    // const findUser = await User.findAll({ where: { email: email } });
-    // if (findUser.length>0) {
-    //   const error = new Error("Oops ! email already exists. Please choose different one");
-    //   error.statusCode = 401;
-    //   return next(error);
-    // }
-
-    // if (password !== confirmPassword) {
-    //   const error = new Error("Passwords should match");
-    //   error.statusCode = 401;
-    //   return next(error);
-
-    // }
+   
     const verificationToken = crypto.randomBytes(16).toString("hex");
 
     const user = await User.create({
@@ -50,7 +34,6 @@ exports.postSignUP = async (req, res, next) => {
       email: email,
       password: md5(password),
       verificationToken,
-      subscriptionId: subscriptionId,
     });
 
     transporter.sendMail({
@@ -66,7 +49,6 @@ exports.postSignUP = async (req, res, next) => {
   } catch (error) {
     next(error);
 
-    // throw error;
   }
 };
 
@@ -74,11 +56,9 @@ exports.verifyUser = async (req, res, next) => {
   try {
     const token = req.params.token;
     const user = await User.findOne({ where: { verificationToken: token } });
-    // console.log(user);
         if (!user) {
           const error = new Error("Invalid verification token");
           error.statusCode = 401;
-          // return next(error);
           throw error;
         }
 
@@ -97,17 +77,14 @@ exports.postLogin = async (req, res, next) => {
     const email = req.body.email;
     const password = md5(req.body.password);
     const errors = validationResult(req);
-
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
-      // throw errors;
     }
 
     const user = await User.findOne({ where: { email: email } });
     if (!user) {
       const error = new Error("A user with this email cannot be found");
       error.statusCode = 401;
-      // return next(error);
       throw error;
     }
     if (user.isValid !== true) {
@@ -218,12 +195,10 @@ exports.createNewPassword = async (req, res, next) => {
   try {
     const password = md5(req.body.password);
     const token = req.params.token;
-    // const hashedpassword = md5(password);
     const errors = validationResult(req);
 
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
-      // throw errors;
     }
     const user = await User.findOne({
       where: {
@@ -232,7 +207,6 @@ exports.createNewPassword = async (req, res, next) => {
       },
     });
     if (!user) {
-      // return res.status(401).json({ message: "User not found" });
       const error = new Error("User not found");
       error.statusCode = 401;
       throw error;
@@ -250,3 +224,5 @@ exports.createNewPassword = async (req, res, next) => {
     next(error);
   }
 };
+
+

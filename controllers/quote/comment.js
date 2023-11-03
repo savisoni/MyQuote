@@ -1,11 +1,8 @@
-// const Comment = require("../../models/comment");
-// const Quote= require("../../models/quote");
 
 
 const sequelize= require("../../util/database");
 const readModels = require("../../models/index");
 
-// const {User,Comment,Subscription,Like,Collaboration,Quote} = readModels;
 const User = readModels.user;
 const Quote= readModels.quote;
 const Like = readModels.like;
@@ -46,42 +43,7 @@ exports.createComment = async(req,res,next)=>{
    }
 }
 
-// exports.deleteComment = async(req,res,next)=>{
-//     try {
-        
-//         const commentId= req.params.commentId;
-//       //   const commentData= await Comment.findAll({where:{id:commentId}});
-//       const commentData= await Comment.findByPk(commentId)
-//         console.log(commentData);
-//         const quoteId = commentData?.quoteId;
-//         const quoteData = await Quote.findByPk(quoteId);
-//         const userId = quoteData?.userId;
-//         console.log("comment data====>", commentData);
-//         console.log("quoteId ====>", quoteId);
-//         console.log("quote data ==>", quoteData);
-//         console.log("user Id====>", userId);
-//         if (! commentData) {
-//             const error = new Error("No comment found with this id");
-//             error.statusCode = 401;
-//             return next(error);
-//         }
-//         if (commentData.userId !== req.user.id || commentData.userId !== userId) {
-//             const error = new Error("Not authorized");
-//             error.statusCode = 401;
-//             return next(error);
-//           }
 
-         
-//         //   commentData.isDeleted = true;
-//         //   await commentData.save();
-//        await commentData.destroy();
-
-//           return res.status(200).json({message:"comment deleted successfully"})
-        
-//     } catch (error) {
-//         return res.status(500).json({message:error.message})
-//     }
-// }
 exports.deleteComment = async (req, res, next) => {
    try {
      const commentId = req.params.commentId;

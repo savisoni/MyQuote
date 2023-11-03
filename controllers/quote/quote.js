@@ -2,11 +2,8 @@
 const { validationResult } = require("express-validator");
 const Sequelize = require("sequelize");
 const { Op, Model } = require("sequelize");
-// const Like = require("../../models/like");
-// const User = require("../../models/user");
-// const Comment = require("../../models/comment");
-// const Subscription = require("../../models/subscription");
-// const Collaboration = require("../../models/collaboration");
+
+const stripe = require("stripe")("sk_test_51NmxGaSBduoNtQ406TBx154LTGeJy7Nyk5vUCF200XcZjPlQ57nBONwBtMfpeGnjVxoHc8JkV7AUs1bBBeFBgFUj00fAt9FXS9");
 
 const sequelize= require("../../util/database");
 const readModels = require("../../models/index");
@@ -15,7 +12,9 @@ const Quote= readModels.quote;
 const Like = readModels.like;
 const Comment = readModels.comment;
 const Subscription = readModels.subscription;
+const SubscriptionsDetail = readModels.subscriptiondetails
 const Collaboration = readModels.collaboration;
+const Customer = readModels.customer;
 exports.getQuotes = async (req, res, next) => {
   try {
     const {
@@ -30,6 +29,7 @@ exports.getQuotes = async (req, res, next) => {
     const quoteId = req.params.quoteId;
     console.log(quoteId);
     let test = [];
+    console.log("req.user=>", req.user);
 
     if (quoteId) {
       const quotedata = await Quote.findByPk(quoteId);
@@ -72,7 +72,6 @@ exports.getQuotes = async (req, res, next) => {
     }
 
     //searching
-    // const searchObj ={}
     if (searchField && searchKey) {
       options.where[searchField] = { [Op.like]: `%${searchKey}%` };
       // options.where = {...searchObj}
@@ -151,49 +150,83 @@ exports.createQuote = async (req, res, next) => {
       throw error;
     }
 
-    const subscription = await Subscription.findByPk(user.subscriptionId);
-    // console.log("subscription data ====>", subscription);
+    const subscription_details= await SubscriptionsDetail.findOne({where:{userId:req.user.id}});
+    console.log("subscription data ----------------====>", subscription_details);
     const quotesCreated = await User.findByPk(user.id, { include: Quote });
-    // console.log("quotes numbers==>" ,quotesCreated.quotes.length);
+    console.log("quotes numbers==>" ,quotesCreated.quotes.length);
+    let plan;
+    // if (!subscription_details) {
+    //    plan= await Subscription.findOne({where:{name:"basic"}});
+    //    console.log("plan===>", plan.maxQuotes);
+    //   if (quotesCreated.quotes.length > plan.maxQuotes) {
+    //     return res
+    //       .status(403)
+    //       .json({ message: "basic limit has been reached" });
+    //   }
+    // }
+    // else{
+    //   plan = await Subscription.findOne({where:{id:subscription_details.subscriptionId}});
+    //   console.log("plan===>", plan.maxQuotes);
 
-    if (!subscription) {
-      const error = new Error("No Subscription found");
-      error.statusCode = 204;
+    //   if (quotesCreated.quotes.length>plan.maxQuotes) {
+    //     return res
+    //     .status(403)
+    //     .json({ message: "subscription limit has been reached" });
+    //   }
+    // }
+   
+    
+    // // switch (subscription.name) {
+    // //   case "basic":
+    // //     if (quotesCreated.quotes.length > subscription.maxQuotes) {
+    // //       return res
+    // //         .status(403)
+    // //         .json({ message: "basic subscription limit has been reached" });
+    // //     }
+    // //     break;
+    // //   case "standard":
+    // //     if (monthlyQuoteCount > subscription.maxQuotes) {
+    // //       return res
+    // //         .status(403)
+    // //         .json({ message: "standard subscription limit has been reached" });
+    // //     }
+    // //     break;
+    // //   case "premium":
+    // //     if (monthlyQuoteCount > subscription.maxQuotes) {
+    // //       return res
+    // //         .status(403)
+    // //         .json({ message: "premium subscription limit has been reached" });
+    // //     }
+    // //     break;
+    // //   default:
+    // //     return res.status(400).json({ message: "Unknown user role" });
+    // // }
 
-      throw error;
+    // const quote = await Quote.create({
+    //   title: title,
+    //   content: content,
+    //   userId: req.user.id,
+    //   collaborationMode: collaborationMode,
+    // });
+    if (!subscription_details) {
+      plan = await Subscription.findOne({ where: { name: "basic" } });
+    } else {
+      plan = await Subscription.findOne({ where: { id: subscription_details.subscriptionId } });
     }
-    switch (subscription.name) {
-      case "basic":
-        if (quotesCreated.quotes.length > subscription.maxQuotes) {
-          return res
-            .status(403)
-            .json({ message: "basic subscription limit has been reached" });
-        }
-        break;
-      case "standard":
-        if (monthlyQuoteCount > subscription.maxQuotes) {
-          return res
-            .status(403)
-            .json({ message: "standard subscription limit has been reached" });
-        }
-        break;
-      case "premium":
-        if (monthlyQuoteCount > subscription.maxQuotes) {
-          return res
-            .status(403)
-            .json({ message: "premium subscription limit has been reached" });
-        }
-        break;
-      default:
-        return res.status(400).json({ message: "Unknown user role" });
+    
+    console.log("plan===>", plan.maxQuotes);
+    
+    if (quotesCreated.quotes.length >= plan.maxQuotes) {
+      return res.status(403).json({ message: subscription_details ? "Subscription limit has been reached" : "Basic limit has been reached" });
     }
-
+    
     const quote = await Quote.create({
       title: title,
       content: content,
       userId: req.user.id,
       collaborationMode: collaborationMode,
     });
+    
     return res.status(201).json({ message: "success", quote: quote });
   } catch (error) {
     next(error)
@@ -256,16 +289,7 @@ exports.deleteQuote = async (req, res, next) => {
       error.statusCode = 401;
       throw error;
     }
-    // quoteToDelete.isDeleted = true;
-    // await quoteToDelete.save();
-
-    //  for (const like of quoteToDelete.likes) {
-    //       await like.destroy();
-    //     }
-    // await Quote.findAll({
-    //   where: { isDeleted:true },
-    //   paranoid: false
-    // });
+    //remove other data related to quote if quote is deleted
     Quote.afterDestroy(async (instance, options) => {
       console.log("instance", instance);
       await Like.destroy({ where: { quoteId: instance.id } });
@@ -307,14 +331,27 @@ exports.collaborationCreateUpdate = async (req, res, next) => {
       throw error;    
 
     }
-    const subscription = await Subscription.findByPk(user.subscriptionId);
+    if (quote.status !== "published" || quote.collaborationMode !== true) {
+      return res
+        .status(403)
+        .json({ message: "Quote is not eligible for collaboration" });
+    }
 
-    if (!subscription) {
-      const error = new Error("Subscription not found");
-      error.statusCode = 204;
-
-      throw error;    
-
+   
+    // const subscription = await Subscription.findByPk(user.subscriptionId);
+    const subscription_details= await SubscriptionsDetail.findOne({where:{userId:req.user.id}});
+let plan;
+    if (!subscription_details) {
+      plan = await Subscription.findOne({ where: { name: "basic" } });
+    } else {
+      plan = await Subscription.findOne({ where: { id: subscription_details.subscriptionId } });
+    }
+    if (plan.name !== "standard" && plan.name !== "premium") {
+      return res
+        .status(403)
+        .json({
+          message: "User must be standard or premium for collaboration request",
+        });
     }
 
     const startOfCurrentDay = new Date();
@@ -329,28 +366,13 @@ exports.collaborationCreateUpdate = async (req, res, next) => {
       },
     });
 
-    if (collaborationsToday >= subscription.maxCollaborationPerDay) {
-      return res
-        .status(403)
-        .json({
-          error:
-            "Permission denied. Maximum collaborations per day limit reached.",
-        });
+    if (collaborationsToday>= plan.maxCollaborationPerDay) {
+      return res.status(403).json({ message: subscription_details ? "Subscription limit has been reached for collaboration" : "Please Subscribe for collaboration" });
     }
 
-    if (quote.status !== "published" || quote.collaborationMode !== true) {
-      return res
-        .status(403)
-        .json({ message: "Quote is not eligible for collaboration" });
-    }
+    
 
-    if (subscription.name !== "standard" && subscription.name !== "premium") {
-      return res
-        .status(403)
-        .json({
-          message: "User must be standard or premium for collaboration request",
-        });
-    }
+    
 
     if (collaborationId) {
       const updateCollab = await Collaboration.findOne({
@@ -530,6 +552,192 @@ exports.approveCollaboration = async (req,res,next)=>{
     next(error);
   }
 }
+
+
+// const handleCustomers = async(user,res)=>{
+//   const customer =await Customer.findByPk(user.id);
+//   console.log("customer==>", customer);
+//     let customerAdd;
+//     //check if customer present or not
+//      if (!customer) {
+//         customerAdd =await stripe.customers.create({email:user.email});
+//   console.log("customerAdd",customerAdd);
+//         const newCustomer = await Customer.create({userId:user.id});
+        
+        
+//      }
+//      return customerAdd;
+  
+// }
+
+exports.createCheckout = async (req, res) => {
+
+  const user = req.user;
+  console.log("----------userdata-------", req.user.id);
+  const priceId = req.params.priceId; 
+  try {
+    let customerAdd;
+    let customer = await Customer.findOne({where:{userId:req.user.id}});
+    console.log("Customer:", customer);
+
+    if (!customer) {
+        customerAdd = await stripe.customers.create({ email: user.email });
+
+        customer = await Customer.create({
+          userId: user.id,
+          customerId:customerAdd.id
+        });
+
+        console.log('New Customer:', customer);
+      //  res.json({message:"New"})
+
+    }
+    else{
+      return res.json({message:"Customer already exists"})
+    }
+ 
+    
+    const cardToken = 'tok_visa';
+
+    const paymentMethod = await stripe.paymentMethods.create({
+      type: 'card',
+      card: {
+        token: cardToken,
+      },
+    });
+    await stripe.paymentMethods.attach(paymentMethod.id, {
+      customer: customerAdd.id,
+    });
+    await stripe.customers.update(customerAdd.id, {
+      invoice_settings: {
+        default_payment_method: paymentMethod.id,
+      },
+    });
+    // const session={};
+    
+
+    const session= await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      customer: customerAdd.id,
+      line_items: [
+        {price: priceId,quantity:1},
+      ],
+      mode: 'subscription',
+      success_url: req.protocol + '://' + req.get('host') + '/quote/checkout/success?session_id={CHECKOUT_SESSION_ID}',
+      cancel_url: req.protocol + '://' + req.get('host') + '/checkout/cancel',
+    });
+    
+    // session.id=sessionCreated.id;
+
+    console.log('Checkout Session:', session);
+
+    res.send({session: session.url});
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: 'An error occurred' , error});
+  }
+  //   // const currentSubscription = await stripe.subscriptions.retrieve(customer.stripeSubscriptionId);
+
+  //  }
+
+  
+
+};
+
+
+exports.checkoutSuccess = async(req,res)=>{
+  const { session_id } = req.query; 
+
+  try {
+    const session = await stripe.checkout.sessions.retrieve(session_id,{ expand: ['line_items']});
+console.log("session==>", session.payment_intent);
+    if (session.payment_status === 'paid') {
+      const line_items = session.line_items;
+
+      console.log("line items ==>", line_items);
+      console.log("line items nbvnvnv ==>", line_items.data[0].price.id);
+
+      const customerId = session.customer;
+      const subscription = await stripe.subscriptions.create({
+        customer: customerId,
+        items:  line_items.data.map(item => ({
+          price: item.price.id,
+          quantity:1
+        }))
+      });
+
+      // await SubscriptionsDetail.create({
+      //      subscriptionId:
+      // })
+
+
+
+      console.log("subscription det===>", subscription.plan.id);
+      console.log("subscription det===>", subscription.plan.product);
+      console.log("subscription det===>", subscription.customer);
+      const startingDate = new Date(subscription.current_period_start * 1000);
+      const endingDate = new Date(subscription.current_period_end * 1000);
+      
+      // const startDateString = startingDate.toLocaleString(); // Format as per user's locale
+      // const endDateString = endingDate.toLocaleString(); 
+
+      const plan = await Subscription.findOne({where:{StripeProductId:subscription.plan.product}});
+      console.log("plan details===>", plan);
+      const customer = await Customer.findOne({where:{customerId:subscription.customer}}) ;
+      console.log("customer detail===>", customer);
+  await SubscriptionsDetail.create({
+      subscriptionId:plan.id,
+      userId:customer.userId,
+      startDate:startingDate,
+      endDate:endingDate,
+      subcription_details:JSON.stringify(subscription)
+  })
+
+      
+
+
+  
+      // console.log("userdetail====>", );
+
+console.log("subscription====>", subscription);
+      res.send('Payment was successful, and a subscription was created!');
+    } else {
+      res.status(400).send('Payment was not successful');
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).send('An error occurred');
+  }
+}
+
+
+
+// exports.createCustomer = async (req, res) => {
+//   try {
+//     const { stripeProductId } = req.body;
+//     const user = req.user;
+
+//     const customer = await stripe.customers.create({
+//       email: user.email
+//     });
+//     //entry too in customer table
+
+//     const subscription = await stripe.subscriptions.create({
+//       customer: customer.id,
+//       items: [{ price: stripeProductId }],
+//     });
+//     //entry too in subscriptions table new
+
+//     res.json({ customerId: customer.id, subscriptionId: subscription.id });
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// };
+
+
+//checkout
+//payment methods
+//customer and subscription create
 
 
 
