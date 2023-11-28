@@ -3,6 +3,7 @@ const { validationResult } = require("express-validator");
 const Sequelize = require("sequelize");
 const { Op, Model } = require("sequelize");
 
+const stripe = require("stripe")("************");
 
 const sequelize= require("../../util/database");
 const readModels = require("../../models/index");
@@ -14,6 +15,8 @@ const Subscription = readModels.subscription;
 const SubscriptionsDetail = readModels.subscriptiondetails
 const Collaboration = readModels.collaboration;
 const Customer = readModels.customer;
+
+
 exports.getQuotes = async (req, res, next) => {
   try {
     const {
@@ -23,13 +26,16 @@ exports.getQuotes = async (req, res, next) => {
       searchKey,
       filterField,
       filterValue,
+      collaborationMode
     } = req.query;
+
+    // let collaborationMode=
     const page = +req.query.page||1;
     const quoteId = req.params.quoteId;
     console.log(quoteId);
     let test = [];
     console.log("req.user=>", req.user);
-
+console.log("cookies----------------------------", req.cookies);
     if (quoteId) {
       const quotedata = await Quote.findByPk(quoteId);
       if (!quotedata) {
@@ -56,37 +62,66 @@ exports.getQuotes = async (req, res, next) => {
         .json({ noOfLikes: noOfLikes, noOfComments: noOfComments });
     }
 
-    // console.log("quote data=====>", quote);
 
     const options = { where: {}, order: [] };
 
-    //sorting
-    if (sortBy && sortOrder) {
-      // sortObj = {[sortBy]:sortOrder}
-      // test = Object.entries(sortObj)
-      test.push(sortBy);
-      test.push(sortOrder);
-      options.order = [test];
-      console.log(options);
-    }
+   // Check if there are existing conditions in the options
+if (options.order.length > 0 || Object.keys(options.where).length > 0) {
+  // There are existing conditions, so apply new conditions to the existing ones
+console.log("-------------------------------------------------------");
 
-    //searching
-    if (searchField && searchKey) {
-      options.where[searchField] = { [Op.like]: `%${searchKey}%` };
-      // options.where = {...searchObj}
-      // console.log();
-    }
+if (collaborationMode) {
+  console.log("mode on------------------");
+  options.where = {collaborationMode:true};
+}
+  // New sorting condition
+  if (sortBy && sortOrder) {
+    options.order.push([sortBy, sortOrder]);
+  }
 
-    // const filterObj ={}
+  // New searching condition
+  if (searchKey) {
+    // options={...options,}
+    options.where[Op.or].push(
+      { title: { [Op.like]: `%${searchKey}%` } },
+      { content: { [Op.like]: `%${searchKey}%` } }
+    );
+  }
 
-    if (filterField && filterValue) {
-      options.where[filterField] = { [Op.eq]: filterValue };
-      console.log(filterObj);
-    }
+  // New filtering condition
+  if (filterField && filterValue) {
+    options.where[filterField] = { [Op.eq]: filterValue };
+  }
+} else {
+  // There are no existing conditions, so set new conditions directly
+
+  if (collaborationMode) {
+    console.log("mode on------------------");
+    options.where = {collaborationMode:true};
+  }
+  // Sorting
+  if (sortBy && sortOrder) {
+    options.order = [[sortBy, sortOrder]];
+  }
+
+  // Searching
+  if (searchKey) {
+    options.where[Op.or] = [
+      { title: { [Op.like]: `%${searchKey}%` } },
+      { content: { [Op.like]: `%${searchKey}%` } }
+    ];
+  }
+
+  // Filtering
+  if (filterField && filterValue) {
+    options.where[filterField] = { [Op.eq]: filterValue };
+  }
+}
+
 
 
     //pagination
-    const pageItems = 2;
+    const pageItems = 5;
     const offset= (page-1)*pageItems;
     const limit = pageItems;
     options.offset=offset;
@@ -97,11 +132,12 @@ exports.getQuotes = async (req, res, next) => {
 
     const quotes = await Quote.findAll(options);
     if (quotes.length === 0) {
-      
+      console.log("quotes----------", quotes);
       return res.status(404).json({ message: "No quotes found" });
     }
+    console.log("quotes----------", quotes);
 
-    return res.status(200).json({ quotes: quotes });
+   res.render("quotes",{ quotes: quotes });
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
@@ -553,27 +589,12 @@ exports.approveCollaboration = async (req,res,next)=>{
 }
 
 
-// const handleCustomers = async(user,res)=>{
-//   const customer =await Customer.findByPk(user.id);
-//   console.log("customer==>", customer);
-//     let customerAdd;
-//     //check if customer present or not
-//      if (!customer) {
-//         customerAdd =await stripe.customers.create({email:user.email});
-//   console.log("customerAdd",customerAdd);
-//         const newCustomer = await Customer.create({userId:user.id});
-        
-        
-//      }
-//      return customerAdd;
-  
-// }
 
 exports.createCheckout = async (req, res) => {
 
   const user = req.user;
   console.log("----------userdata-------", req.user.id);
-  const priceId = req.params.priceId; 
+  const priceId = req.body.priceId; 
   try {
     let customerAdd;
     let customer = await Customer.findOne({where:{userId:req.user.id}});
@@ -588,7 +609,6 @@ exports.createCheckout = async (req, res) => {
         });
 
         console.log('New Customer:', customer);
-      //  res.json({message:"New"})
 
     }
     else{
@@ -612,7 +632,6 @@ exports.createCheckout = async (req, res) => {
         default_payment_method: paymentMethod.id,
       },
     });
-    // const session={};
     
 
     const session= await stripe.checkout.sessions.create({
@@ -626,7 +645,6 @@ exports.createCheckout = async (req, res) => {
       cancel_url: req.protocol + '://' + req.get('host') + '/checkout/cancel',
     });
     
-    // session.id=sessionCreated.id;
 
     console.log('Checkout Session:', session);
 
@@ -635,9 +653,7 @@ exports.createCheckout = async (req, res) => {
     console.error('Error:', error);
     res.status(500).json({ error: 'An error occurred' , error});
   }
-  //   // const currentSubscription = await stripe.subscriptions.retrieve(customer.stripeSubscriptionId);
-
-  //  }
+  
 
   
 
@@ -657,17 +673,10 @@ console.log("session==>", session.payment_intent);
       console.log("line items nbvnvnv ==>", line_items.data[0].price.id);
 
       const customerId = session.customer;
-      const subscription = await stripe.subscriptions.create({
-        customer: customerId,
-        items:  line_items.data.map(item => ({
-          price: item.price.id,
-          quantity:1
-        }))
-      });
+      const subscriptionId = session.subscription; 
 
-      // await SubscriptionsDetail.create({
-      //      subscriptionId:
-      // })
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    
 
 
 
@@ -677,8 +686,7 @@ console.log("session==>", session.payment_intent);
       const startingDate = new Date(subscription.current_period_start * 1000);
       const endingDate = new Date(subscription.current_period_end * 1000);
       
-      // const startDateString = startingDate.toLocaleString(); // Format as per user's locale
-      // const endDateString = endingDate.toLocaleString(); 
+
 
       const plan = await Subscription.findOne({where:{StripeProductId:subscription.plan.product}});
       console.log("plan details===>", plan);
@@ -709,29 +717,6 @@ console.log("subscription====>", subscription);
   }
 }
 
-
-
-// exports.createCustomer = async (req, res) => {
-//   try {
-//     const { stripeProductId } = req.body;
-//     const user = req.user;
-
-//     const customer = await stripe.customers.create({
-//       email: user.email
-//     });
-//     //entry too in customer table
-
-//     const subscription = await stripe.subscriptions.create({
-//       customer: customer.id,
-//       items: [{ price: stripeProductId }],
-//     });
-//     //entry too in subscriptions table new
-
-//     res.json({ customerId: customer.id, subscriptionId: subscription.id });
-//   } catch (error) {
-//     res.status(500).json({ error: error.message });
-//   }
-// };
 
 
 //checkout

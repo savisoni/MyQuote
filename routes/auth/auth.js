@@ -5,6 +5,9 @@ const { body, param} = require("express-validator");
 const User = require("../../models/user");
 const md5 = require("md5");
 
+
+router.get("/",authController.getLoginPage);
+
 router.post(
   "/signup",
   [
@@ -38,7 +41,7 @@ router.post(
   ],
   authController.postSignUP
 );
-router.post("/login", authController.postLogin);
+router.post("/", authController.postLogin);
 
 router.post("/reset-pwd", authController.postResetPassword);
 router.post("/reset-pwd/:token",[

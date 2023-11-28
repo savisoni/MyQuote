@@ -17,6 +17,9 @@ console.log("comment====>", comment);
 console.log("seq=========>", readModels);
 
 
+exports.getLoginPage= async(req,res,next)=>{
+  res.render("login",{layout:"blank"});
+}
 
 exports.postSignUP = async (req, res, next) => {
   try {
@@ -101,11 +104,11 @@ exports.postLogin = async (req, res, next) => {
     const token = jwt.sign({ id: user.id }, "somesecretkey", {
       expiresIn: "1h",
     });
-    res.status(200).json({
-      message: "User loggedIn successfully",
-      token: token,
-      user: user,
-    });
+    console.log("token ---------------------......." , token);
+    res.cookie('jwt',token);
+    
+    res.json({ user: user, token: token });
+    // res.rde({user:user, token:token})
   } catch (error) {
     next(error);
   }
@@ -224,5 +227,3 @@ exports.createNewPassword = async (req, res, next) => {
     next(error);
   }
 };
-
-

@@ -74,6 +74,8 @@ User.hasMany(models.comment);
 User.hasOne(models.customer);
 User.hasMany(require('./quote'));
 User.hasMany(require("./subscriptiondetails"));
+User.hasMany(models.msgrequest);
+User.hasMany(models.chat);
 
 }
 module.exports = User;

@@ -1,0 +1,181 @@
+<div class="mb-4" id="current-user">{{currentUser.dataValues.id}}</div>
+<div id="planInfo">{{plan.dataValues.name}}</div>
+<div class="row">
+  <div class="col-md-3">
+    <ul class="list-group">
+      {{log "----++++++++++++------"}}
+      {{#each users}}
+        <li
+          class="list-group-item d-flex justify-content-between align-items-start user-list" data-id="{{this.dataValues.id}}"
+        >
+          {{this.dataValues.username}}
+        </li>
+      {{/each}}
+    </ul>
+  </div>
+  <div class="col-md-9">
+    <h1 class="start">Click to start chat</h1>
+    <div class="chat-section" style="display: none;">
+      <div
+        id="chat-container"
+        style="background-color: rgb(199, 240, 248); height: 500px; width:1000px"
+      >
+      </div>
+       <div id="chat-request-container" style="display: none;">
+    <button id="accept-request">Accept Request</button>
+    <button id="reject-request">Reject Request</button>
+  </div>
+      <form action="" id="chat-form">
+        <input
+          type="text"
+          name="message"
+          id="message"
+          ,
+          placeholder="Enter Message"
+          required
+          style="width: 350px; height:50px"
+        />
+        <input type="submit" value="send Message" class="btn btn-primary" />
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+    const socket = io();
+
+   let senderId= document.getElementById("current-user").innerText;
+   console.log("sender --", senderId)
+   let receiverId;
+   let planInfo = document.getElementById("planInfo").innerText;
+
+  $(document).ready(async function(){
+       let requestMessage;
+     $('.user-list').click(function(){
+            receiverId=  $(this).attr('data-id');
+            $('.start').hide(); 
+            $('.chat-section').show(); 
+           
+            socket.emit("existingChats",{senderId:senderId,receiverId:receiverId});
+        }) 
+         
+
+    $("#chat-form").submit(function(e){
+           e.preventDefault();
+
+           requestMessage = $("#message").val();
+           console.log("req messsage---------", requestMessage)
+               if(planInfo==="standard"){
+                  socket.emit("checkChatRequestStatus", { senderId: senderId, receiverId: receiverId });
+              }
+               else{
+              socket.emit("storeChatMessage", { receiverId: receiverId, requestMessage: requestMessage, senderId: senderId });
+               $("#message").val(" ");
+               }
+ })
+
+  socket.on("receiveChatRequest", function (data) {
+        const { senderId } = data;
+        console.log("cvbhnjmkjhcvbncvb", data)
+        const userDecision = confirm(`You have a chat request from ${senderId}. Do you want to accept?`);
+
+      socket.emit("respondToChatRequest", { senderId, isAccepted: userDecision });
+
+        if (userDecision) {
+            socket.emit("chatRequestAccepted", { senderId, receiverId: senderId });
+        }
+    });
+
+      socket.on("chatRequestAcceptedResponse", function (data) {
+        const { receiverId } = data;
+        alert(`Your chat request to ${receiverId} has been accepted!`);
+    });  
+
+   //approved or not
+   socket.on("checkChatRequestStatusResponse", function (response) {
+        if (response && response.isRequestSent) {
+            if (response.isApproved) {
+              console.log("checkChatRequestStatusResponse")
+      socket.emit("storeChatMessage", { receiverId: receiverId, requestMessage: requestMessage, senderId: senderId });
+             
+            } else {
+              console.log("checkChatRequestStatusResponse else----------")
+
+                alert("Your chat request has not been approved yet.");
+            }
+        } else {
+          alert("chat request sent successfully");
+          console.log("res--------------", response)
+        socket.emit("sendChatRequest", { senderId: senderId, receiverId: receiverId });
+
+        }
+    });
+
+
+       socket.on("loadNewChat", function(data){
+       console.log("data------", data)
+      if(senderId==data.receiverId && receiverId==data.senderId){
+let html =`<h6>${data.requestMessage}</h6>`;
+
+      $("#chat-container").append(html);
+     }
+
+      
+    })
+ 
+    socket.on("sendChatRequestResponse", function (response) {
+        if (response) {
+            if (response.message) {
+                alert(response.message);
+            } else {
+                alert("Chat request sent successfully!");
+            }
+        } else {
+            console.error("Error sending chat request");
+        }
+    });
+    
+
+
+    socket.on("storeChatMessageResponse", function (response) {
+        if (response && response.data) {
+            console.log("Chat message stored successfully:", response.data);
+            $("#message").val(''); 
+                        console.log("Chat message stored successfully-----------------:", response.data);
+
+            let chat = response.data.message;
+            let html = `<h6>${chat}</h6>`;
+            $("#chat-container").append(html);
+        } else {
+            console.error("Error storing chat message");
+        }
+    });
+
+
+function sendMessage(requestMessage) {
+      socket.emit("storeChatMessage", { receiverId: receiverId, requestMessage: requestMessage, senderId: senderId });
+}
+
+function sendChatRequest() {
+        socket.emit("sendChatRequest", { senderId: senderId, receiverId: receiverId });
+  }
+
+
+  //load old chats
+socket.on("loadRequests", function(data){
+     $('#chat-container').html('');
+     console.log("old data-----", data)
+     let chats= data.chats;
+     let html ='';
+
+for(let i=0; i<chats.length;i++){
+      console.log("aaaaaaaaaaaaa------------------", chats[i])
+      html +=`<h5>${chats[i]['message']}</h5>`
+    }
+   $('#chat-container').append(html);
+})
+   
+   })
+
+    
+</script>

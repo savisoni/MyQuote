@@ -33,6 +33,9 @@ router.put("/update-quote/:quoteId",[
 
 router.delete("/delete-quote/:quoteId",Auth,quoteController.deleteQuote);
 
+
+// router.get("/messages",quoteController.getChatForm);
+
 // router.post("/collaboration-req", Auth, quoteController.requestCollabPermission);
 
 router.put("/collaboration", Auth, quoteController.collaborationCreateUpdate);
@@ -43,7 +46,7 @@ router.get("/all-collaborations",Auth,quoteController.getCollaboration);
 
 router.post("/approve-collab",Auth,quoteController.approveCollaboration);
 
-router.get("/checkout-session/:priceId", Auth, quoteController.createCheckout);
+router.get("/checkout-session", Auth, quoteController.createCheckout);
 
 router.get("/checkout/success",quoteController.checkoutSuccess);
 
